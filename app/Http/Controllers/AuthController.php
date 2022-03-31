@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -25,5 +26,27 @@ class AuthController extends Controller
             'user' => $user,
             'token' => $token
         ], 201);
+    }
+
+    public function login(Request $request)
+    {
+        $credential = $request->validate([
+            'email' => 'required|string|email|exists:users,email',
+            'password' => 'required',
+        ]);
+
+        if (!Auth::attempt($credential)) {
+            return response([
+                'error' => 'The Provided credentials are not correct'
+            ], 422);
+        }
+
+        $user = Auth::user();
+        $token = $user->createToken('main')->plainTextToken;
+
+        return response([
+            'user' => $user,
+            'token' => $token
+        ], 200);
     }
 }
