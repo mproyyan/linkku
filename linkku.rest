@@ -1,0 +1,11 @@
+POST http://linkku.test/api/register
+Content-Type: application/json
+Accept: application/json
+
+{
+   "name": "Royyan",
+   "username": "siroyannhhnnfff",
+   "email": "mproyyyahhfffn@gmail.com",
+   "password": "password",
+   "password_confirmation": "password"
+}
