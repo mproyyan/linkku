@@ -55,4 +55,33 @@ class AuthTest extends TestCase
                     ->etc()
             );
     }
+
+    public function test_user_login_failed()
+    {
+        $user = User::factory()->create();
+
+        $response = $this->postJson('/api/login', [
+            'email' => $user->email,
+            'password' => 'passwordssss'
+        ]);
+
+        $response->assertStatus(422)
+            ->assertExactJson([
+                'error' => 'The Provided credentials are not correct'
+            ]);
+    }
+
+    public function test_user_logout()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/logout');
+
+        $response->assertStatus(200);
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'tokenable_id' => $user->id
+        ]);
+    }
 }
