@@ -21,6 +21,11 @@ use Illuminate\Support\Facades\Route;
 // });
 
 Route::middleware('auth:sanctum')->group(function () {
+
+   Route::prefix('/user')->group(function () {
+      Route::put('/update-banner', [ProfileController::class, 'updateBanner']);
+   });
+
    Route::post('/logout', [AuthController::class, 'logout']);
 });
 
