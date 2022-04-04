@@ -80,4 +80,58 @@ class ProfileTest extends TestCase
         Storage::disk('public')->assertExists($file2->hashName('banner'))
             ->assertMissing($file1->hashName('banner'));
     }
+
+    public function test_update_user_profile()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+
+        Storage::fake('public');
+        $file = UploadedFile::fake()->image('profile-picture.jpeg', 500, 400);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->putJson('/api/user/update-profile', [
+                'name' => 'Muhammad Pandu Royyan',
+                'username' => $user->username,
+                'image' => $file
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('user.image', fn ($path) => $path === $file->hashName('avatar'))
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json->where('user.name', 'Muhammad Pandu Royyan')
+                    ->where('user.username', $user->username)
+                    ->missing('user.password')
+                    ->etc()
+            );
+
+        Storage::disk('public')->assertExists($file->hashName('avatar'));
+    }
+
+    public function test_old_image_deleted_when_got_new_image()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+
+        Storage::fake('public');
+        $file1 = UploadedFile::fake()->image('profile-picture-1.jpeg', 500, 400);
+        $file2 = UploadedFile::fake()->image('profile-picture-2.jpeg', 500, 400);
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->putJson('/api/user/update-profile', [
+                'image' => $file1
+            ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->putJson('/api/user/update-profile', [
+                'image' => $file2
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('user.image', fn ($path) => $path === $file2->hashName('avatar'));
+
+        Storage::disk('public')->assertExists($file2->hashName('avatar'))
+            ->assertMissing($file1->hashName('avatar'));
+    }
 }

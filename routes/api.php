@@ -24,6 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
    Route::prefix('/user')->group(function () {
       Route::put('/update-banner', [ProfileController::class, 'updateBanner']);
+      Route::put('/update-profile', [ProfileController::class, 'updateProfile']);
    });
 
    Route::post('/logout', [AuthController::class, 'logout']);
