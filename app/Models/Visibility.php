@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class Visibility extends Model
 {
     use HasFactory;
+
+    protected $fillable = ['visibility', 'description'];
 }

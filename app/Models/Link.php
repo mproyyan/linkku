@@ -23,4 +23,14 @@ class Link extends Model
             ->generateSlugsFrom('title')
             ->saveSlugsTo('slug');
     }
+
+    public function author()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function type()
+    {
+        return $this->belongsTo(Visibility::class, 'visibility');
+    }
 }

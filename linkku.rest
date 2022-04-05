@@ -9,3 +9,9 @@ Accept: application/json
    "password": "password",
    "password_confirmation": "password"
 }
+
+###
+
+GET http://linkku.test/api/links
+Content-Type: application/json
+Accept: application/json
