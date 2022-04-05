@@ -33,4 +33,9 @@ class Link extends Model
     {
         return $this->belongsTo(Visibility::class, 'visibility');
     }
+
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
 }
