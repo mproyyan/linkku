@@ -19,11 +19,12 @@ class LinkResource extends JsonResource
             'author' => new UserResource($this->whenLoaded('author')),
             'title' => $this->title,
             'slug' => $this->slug,
-            'description' => $this->description,
-            'excerpt' => $this->excerpt,
+            'description' => $this->description ?? null,
+            'excerpt' => $this->excerpt ?? null,
             'url' => $this->url,
             'views' => $this->views,
-            'visibility' => $this->type->visibility
+            'visibility' => $this->whenLoaded('type')->visibility,
+            'tags' => TagResource::collection($this->whenLoaded('tags'))
         ];
     }
 }

@@ -28,12 +28,17 @@ Route::middleware('auth:sanctum')->group(function () {
       Route::put('/update-profile', [ProfileController::class, 'updateProfile']);
    });
 
+   Route::apiResource('links', LinkController::class)->except(['index', 'show']);
+
    Route::post('/logout', [AuthController::class, 'logout']);
 });
 
 Route::get('/user/{user:username}', [ProfileController::class, 'getUserProfile']);
 
-Route::apiResource('links', LinkController::class);
+Route::prefix('/links')->group(function () {
+   Route::get('/', [LinkController::class, 'index']);
+   Route::get('/{link:slug}', [LinkController::class, 'show']);
+});
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

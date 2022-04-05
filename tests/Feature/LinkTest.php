@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Link;
+use App\Models\Tag;
 use App\Models\User;
 use App\Models\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\TestCase;
+
+use function PHPUnit\Framework\assertJson;
 
 class LinkTest extends TestCase
 {
@@ -39,5 +42,88 @@ class LinkTest extends TestCase
                             ->etc()
                     )
             );
+    }
+
+    public function test_save_link_to_database()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(5)->create();
+        $tagsId = $tags->pluck('id')->all();
+        $visibility = Visibility::create(['visibility' => 'Public']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/links', [
+                'title' => 'laravel relationship documentation',
+                'url' => 'https://laravel.com/docs/9.x/database-testing#many-to-many-relationships',
+                'tags' => $tags->pluck('id')->shuffle()->take(mt_rand(1, 3)),
+                'visibility' => $visibility->id
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('link.tags.0.id', fn ($id) => in_array($id, $tagsId))
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json->where('link.title', 'laravel relationship documentation')
+                    ->where('link.slug', 'laravel-relationship-documentation')
+                    ->where('link.author.username', $user->username)
+                    ->where('link.visibility', 'Public')
+                    ->etc()
+            );
+    }
+
+    public function test_error_when_given_tags_more_than_five()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(10)->create();
+        $visibility = Visibility::create(['visibility' => 'Public']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/links', [
+                'title' => 'laravel relationship documentation',
+                'url' => 'https://laravel.com/docs/9.x/database-testing#many-to-many-relationships',
+                'tags' => [1, 2, 3, 4, 5, 6],
+                'visibility' => $visibility->id
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('errors.tags.0', 'The tags must not have more than 5 items.');
+    }
+
+    public function test_error_when_given_tags_doesnt_exist_in_database()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(1)->create();
+        $visibility = Visibility::create(['visibility' => 'Public']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/links', [
+                'title' => 'laravel relationship documentation',
+                'url' => 'https://laravel.com/docs/9.x/database-testing#many-to-many-relationships',
+                'tags' => [6],
+                'visibility' => $visibility->id
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_error_when_given_visibility_doesnt_exist_in_database()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(1)->create();
+        $visibility = Visibility::create(['visibility' => 'Public']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/links', [
+                'title' => 'laravel relationship documentation',
+                'url' => 'https://laravel.com/docs/9.x/database-testing#many-to-many-relationships',
+                'tags' => [1],
+                'visibility' => 2
+            ]);
+
+        $response->assertStatus(422);
     }
 }

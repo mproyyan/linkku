@@ -11,7 +11,7 @@ class Link extends Model
 {
     use HasFactory, HasSlug;
 
-    protected $fillable = ['has', 'title', 'slug', 'url', 'description', 'excerpt', 'clicks', 'views',];
+    protected $fillable = ['hash', 'title', 'slug', 'url', 'description', 'excerpt', 'clicks', 'views', 'user_id', 'visibility'];
 
     const VISIBILITY = [1, 2];
     const PUBLIC = 1;
