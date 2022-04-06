@@ -126,4 +126,59 @@ class LinkTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    public function test_get_link_by_slug()
+    {
+        $user = User::factory()->create();
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
+            ->hasAttached(Tag::factory(3)->create())
+            ->create();
+
+        $response = $this->getJson('/api/links/' . $link->slug);
+
+        $response->assertStatus(200)
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json->where('link.title', $link->title)
+                    ->where('link.slug', $link->slug)
+                    ->where('link.author.username', $user->username)
+                    ->where('link.visibility', 'Public')
+                    ->has('link.tags', 3)
+                    ->etc()
+            );
+    }
+
+    public function test_abort_if_link_visibility_is_private()
+    {
+        $user = User::factory()->create();
+        Visibility::create(['visibility' => 'Public']);
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for(Visibility::create(['visibility' => 'Private']), 'type')
+            ->hasAttached(Tag::factory(1)->create())
+            ->create();
+
+        $response = $this->getJson('/api/links/' . $link->slug);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_owner_can_access_private_link()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        Visibility::create(['visibility' => 'Public']);
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for(Visibility::create(['visibility' => 'Private']), 'type')
+            ->hasAttached(Tag::factory(1)->create())
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/links/' . $link->slug);
+
+        $response->assertStatus(200);
+    }
 }

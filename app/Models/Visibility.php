@@ -9,5 +9,5 @@ class Visibility extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['visibility', 'description'];
+    protected $fillable = ['id', 'visibility', 'description'];
 }

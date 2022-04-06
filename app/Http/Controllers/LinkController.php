@@ -6,11 +6,17 @@ use App\Http\Resources\LinkResource;
 use Illuminate\Http\Request;
 use App\Models\Link;
 use App\Models\Tag;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
 class LinkController extends Controller
 {
+    // public function __construct()
+    // {
+    //     $this->authorizeResource(Link::class, 'link');
+    // }
+
     /**
      * Display a listing of the resource.
      *
@@ -65,9 +71,13 @@ class LinkController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show(Link $link)
     {
-        //
+        $this->authorize('view', $link);
+
+        return response([
+            'link' => new LinkResource($link->load(['author', 'type', 'tags']))
+        ], 200);
     }
 
     /**
