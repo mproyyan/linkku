@@ -35,4 +35,13 @@ class LinkFactory extends Factory
             'visibility' => 1
         ];
     }
+
+    public function private()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'visibility' => 2
+            ];
+        });
+    }
 }

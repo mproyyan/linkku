@@ -13,11 +13,6 @@ use Illuminate\Support\Facades\DB;
 
 class LinkController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->authorizeResource(Link::class, 'link');
-    // }
-
     /**
      * Display a listing of the resource.
      *
@@ -25,7 +20,10 @@ class LinkController extends Controller
      */
     public function index()
     {
-        $links = Link::with(['author', 'type', 'tags'])->paginate(20);
+        $links = Link::with(['author', 'type', 'tags'])
+            ->where('visibility', '=', 1)
+            ->paginate(20);
+
         return LinkResource::collection($links);
     }
 
@@ -130,8 +128,22 @@ class LinkController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Link $link)
     {
-        //
+        $this->authorize('delete', $link);
+
+        DB::transaction(function () use ($link) {
+            DB::table('taggables')
+                ->where('taggable_id', $link->id)
+                ->where('taggable_type', 'App\Models\Link')
+                ->delete();
+
+            $link->delete();
+        });
+
+        return response([
+            'status' => true,
+            'message' => 'Link deleted successfully'
+        ], 200);
     }
 }

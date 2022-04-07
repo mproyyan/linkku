@@ -65,9 +65,10 @@ class LinkPolicy
      * @param  \App\Models\Link  $link
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function delete(User $user, Link $link)
+    public function delete(?User $user, Link $link)
     {
-        //
+        $user = auth('sanctum')->user();
+        return $link->user_id == optional($user)->id;
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\TestCase;
 
@@ -19,11 +20,15 @@ class LinkTest extends TestCase
 
     public function test_get_all_links()
     {
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
         $user = User::factory()->create();
+        Link::factory(5)->private()->for($user, 'author')->create();
         $links = Link::factory()
-            ->count(20)
+            ->count(15)
             ->for($user, 'author')
-            ->for(Visibility::create(['visibility' => 'Public']), 'type')
+            ->for($public, 'type')
             ->create();
 
         $response = $this->getJson('/api/links');
@@ -35,7 +40,7 @@ class LinkTest extends TestCase
                     ->has('links')
                     ->has(
                         'data',
-                        20,
+                        15,
                         fn ($json) =>
                         $json->where('visibility', 'Public')
                             ->where('author.username', $user->username)
@@ -48,9 +53,9 @@ class LinkTest extends TestCase
     {
         $user = User::factory()->create();
         $token = $user->createToken('main')->plainTextToken;
-        $tags = Tag::factory(5)->create();
+        $tags = Tag::factory(3)->create();
         $tagsId = $tags->pluck('id')->all();
-        $visibility = Visibility::create(['visibility' => 'Public']);
+        $visibility = Visibility::create(['id' => 1, 'visibility' => 'Public']);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/links', [
@@ -257,5 +262,64 @@ class LinkTest extends TestCase
             ]);
 
         $response->assertStatus(403);
+    }
+
+    public function test_delete_link_by_authenticated_owner()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(4)->create();
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->deleteJson('/api/links/' . $link->slug);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => true,
+                'message' => 'Link deleted successfully'
+            ]);
+
+        $this->assertDatabaseMissing('links', [
+            'title' => $link->title
+        ]);
+
+        foreach ($tags->pluck('id')->all() as $id) {
+            $this->assertDatabaseMissing('taggables', [
+                'tag_id' => $id,
+                'taggable_id' => $link->id,
+                'taggable_type' => 'App\Models\Link'
+            ]);
+        }
+    }
+
+    public function test_delete_link_failed_if_not_owner()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tag = Tag::factory()->create();
+        $link = Link::factory()
+            ->for(User::factory()->create(), 'author')
+            ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
+            ->hasAttached($tag)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->deleteJson('/api/links/' . $link->slug);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseHas('links', [
+            'title' => $link->title
+        ]);
+
+        $this->assertDatabaseHas('taggables', [
+            'tag_id' => $tag->id,
+            'taggable_type' => 'App\Models\Link'
+        ]);
     }
 }
