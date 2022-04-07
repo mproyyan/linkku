@@ -9,6 +9,7 @@ use App\Models\Tag;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class LinkController extends Controller
 {
@@ -87,9 +88,40 @@ class LinkController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Link $link)
     {
-        //
+        $this->authorize('update', $link);
+
+        $data = $request->validate([
+            'title' => 'required|max:80',
+            'url' => 'required|active_url',
+            'tags' => 'required|array|max:5|min:1',
+            'tags.*' => ['numeric', 'exists:tags,id', 'distinct:ignore_case'],
+            'visibility' => ['required', 'numeric', 'exists:visibilities,id'],
+        ]);
+
+        if ($request->description) {
+            $request->validate(['description' => 'required|string']);
+            $data['description'] = $request->description;
+            $data['excerpt'] = Str::limit(strip_tags($request->description), 200, '...');
+        }
+
+        DB::transaction(function () use ($data, $link) {
+            DB::table('taggables')
+                ->where('taggable_id', $link->id)
+                ->where('taggable_type', 'App\Models\Link')
+                ->delete();
+
+            foreach ($data['tags'] as $tag) {
+                $link->tags()->attach($tag);
+            }
+
+            $link->update($data);
+        });
+
+        return response([
+            'link' => new LinkResource($link->load(['author', 'tags', 'type']))
+        ], 200);
     }
 
     /**

@@ -181,4 +181,81 @@ class LinkTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_update_link_by_authenticated_owner()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
+            ->hasAttached(Tag::factory(3)->create())
+            ->create();
+
+        $newTags = Tag::factory(5)->create();
+        $newVisibility = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->putJson('/api/links/' . $link->slug, [
+                'title' => 'updated title',
+                'url' => 'https://laravel.com/docs/9.x/database-testing#main-content',
+                'tags' => $newTags->pluck('id')->shuffle()->take(3),
+                'visibility' => $newVisibility->id,
+                'description' => 'added description'
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('link.tags.0.id', fn ($id) => in_array($id, $newTags->pluck('id')->all()))
+            ->assertJsonPath('link.tags.0.id', fn ($id) => !in_array($id, [1, 2, 3]))
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json->where('link.title', 'updated title')
+                    ->where('link.slug', 'updated-title')
+                    ->where('link.url', 'https://laravel.com/docs/9.x/database-testing#main-content')
+                    ->where('link.description', 'added description')
+                    ->where('link.visibility', 'Private')
+                    ->whereType('link.excerpt', 'string')
+                    ->etc()
+            );
+
+        $this->assertDatabaseMissing('taggables', [
+            'tag_id' => 1,
+            'taggable_type' => 'App\Models\Link'
+        ]);
+
+        $this->assertDatabaseMissing('taggables', [
+            'tag_id' => 2,
+            'taggable_type' => 'App\Models\Link'
+        ]);
+
+        $this->assertDatabaseMissing('taggables', [
+            'tag_id' => 3,
+            'taggable_type' => 'App\Models\Link'
+        ]);
+    }
+
+    public function test_update_link_failed_if_not_owner()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $link = Link::factory()
+            ->for(User::factory()->create(), 'author')
+            ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
+            ->hasAttached(Tag::factory(3)->create())
+            ->create();
+
+        $newTags = Tag::factory(5)->create();
+        $newVisibility = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->putJson('/api/links/' . $link->slug, [
+                'title' => 'updated title',
+                'url' => 'https://laravel.com/docs/9.x/database-testing#main-content',
+                'tags' => $newTags->pluck('id')->shuffle()->take(3),
+                'visibility' => $newVisibility->id,
+                'description' => 'added description'
+            ]);
+
+        $response->assertStatus(403);
+    }
 }

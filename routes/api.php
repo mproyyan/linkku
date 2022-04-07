@@ -28,7 +28,9 @@ Route::middleware('auth:sanctum')->group(function () {
       Route::put('/update-profile', [ProfileController::class, 'updateProfile']);
    });
 
-   Route::apiResource('links', LinkController::class)->except(['index', 'show']);
+   Route::apiResource('links', LinkController::class)
+      ->except(['index', 'show'])
+      ->scoped(['link' => 'slug']);
 
    Route::post('/logout', [AuthController::class, 'logout']);
 });
