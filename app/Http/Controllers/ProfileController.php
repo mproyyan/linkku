@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
 
@@ -11,18 +13,28 @@ class ProfileController extends Controller
 {
     public function getUserProfile(User $user)
     {
+        $userRequest = auth('sanctum')->user();
+
         return response([
-            'user' => $user
+            'owner' => optional($userRequest)->id == $user->id ? true : false,
+            'user' => new UserResource($user),
         ], 200);
     }
 
-    public function updateBanner(Request $request)
+    public function getAuthUser(Request $request)
     {
+        $user = $request->user();
+        return response(['user' => new UserResource($user)], 200);
+    }
+
+    public function updateBanner(Request $request, User $user)
+    {
+        Gate::authorize('user-update', $user);
+
         $request->validate([
             'banner' => 'required|image|max:2048|mimes:jpg,jpeg,png|dimensions:min_width=800,min_height=500'
         ]);
 
-        $user = $request->user();
         $user->banner ? Storage::disk('public')->delete($user->banner) : true;
 
         $banner = $request->file('banner');
@@ -37,12 +49,15 @@ class ProfileController extends Controller
         $user->banner = $path;
         $user->save();
 
-        return response(['user' => $user], 200);
+        return response([
+            'owner' => optional(auth('sanctum')->user())->id == $user->id ? true : false,
+            'user' => new UserResource($user)
+        ], 200);
     }
 
-    public function updateProfile(Request $request)
+    public function updateProfile(Request $request, User $user)
     {
-        $user = $request->user();
+        Gate::authorize('user-update', $user);
 
         if ($request->input('name')) {
             $data = $request->validate(['name' => 'required|max:50|regex:/^[a-zA-Z\s]+$/']);
@@ -73,6 +88,9 @@ class ProfileController extends Controller
 
         $user->save();
 
-        return response(['user' => $user], 200);
+        return response([
+            'owner' => optional(auth('sanctum')->user())->id == $user->id ? true : false,
+            'user' => new UserResource($user)
+        ], 200);
     }
 }

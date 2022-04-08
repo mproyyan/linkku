@@ -24,8 +24,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->group(function () {
 
    Route::prefix('/user')->group(function () {
-      Route::put('/update-banner', [ProfileController::class, 'updateBanner']);
-      Route::put('/update-profile', [ProfileController::class, 'updateProfile']);
+      Route::get('/', [ProfileController::class, 'getAuthUser']);
+      Route::put('/{user:username}/update-banner', [ProfileController::class, 'updateBanner']);
+      Route::put('/{user:username}/update-profile', [ProfileController::class, 'updateProfile']);
    });
 
    Route::apiResource('links', LinkController::class)
