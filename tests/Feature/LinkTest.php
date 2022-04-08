@@ -191,10 +191,11 @@ class LinkTest extends TestCase
     {
         $user = User::factory()->create();
         $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
         $link = Link::factory()
             ->for($user, 'author')
             ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
-            ->hasAttached(Tag::factory(3)->create())
+            ->hasAttached($tags)
             ->create();
 
         $newTags = Tag::factory(5)->create();
@@ -216,27 +217,22 @@ class LinkTest extends TestCase
                 fn (AssertableJson $json) =>
                 $json->where('link.title', 'updated title')
                     ->where('link.slug', 'updated-title')
-                    ->where('link.url', 'https://laravel.com/docs/9.x/database-testing#main-content')
                     ->where('link.description', 'added description')
                     ->where('link.visibility', 'Private')
                     ->whereType('link.excerpt', 'string')
                     ->etc()
             );
 
-        $this->assertDatabaseMissing('taggables', [
-            'tag_id' => 1,
-            'taggable_type' => 'App\Models\Link'
+        $this->assertDatabaseHas('links', [
+            'url' => 'https://laravel.com/docs/9.x/database-testing#main-content'
         ]);
 
-        $this->assertDatabaseMissing('taggables', [
-            'tag_id' => 2,
-            'taggable_type' => 'App\Models\Link'
-        ]);
-
-        $this->assertDatabaseMissing('taggables', [
-            'tag_id' => 3,
-            'taggable_type' => 'App\Models\Link'
-        ]);
+        foreach ($tags->pluck('id')->all() as $id) {
+            $this->assertDatabaseMissing('taggables', [
+                'tag_id' => $id,
+                'taggable_type' => 'App\Models\Link'
+            ]);
+        }
     }
 
     public function test_update_link_failed_if_not_owner()
@@ -321,5 +317,56 @@ class LinkTest extends TestCase
             'tag_id' => $tag->id,
             'taggable_type' => 'App\Models\Link'
         ]);
+    }
+
+    public function test_visit_link_url()
+    {
+        $link = Link::factory()
+            ->for(User::factory()->create(), 'author')
+            ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
+            ->hasAttached(Tag::factory(3)->create())
+            ->create();
+
+        $response = $this->getJson('/api/g/' . $link->hash);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('url', $link->url);
+
+        $this->assertDatabaseHas('links', [
+            'id' => $link->id,
+            'views' => 1
+        ]);
+    }
+
+    public function test_owner_can_visit_private_link()
+    {
+        Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for(Visibility::create(['id' => 2, 'visibility' => 'Private']), 'type')
+            ->hasAttached(Tag::factory(3)->create())
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/g/' . $link->hash);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('url', $link->url);
+    }
+
+    public function test_abort_if_visit_private_link()
+    {
+        Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $link = Link::factory()
+            ->for(User::factory()->create(), 'author')
+            ->for(Visibility::create(['id' => 2, 'visibility' => 'Private']), 'type')
+            ->hasAttached(Tag::factory(3)->create())
+            ->create();
+
+        $response = $this->getJson('/api/g/' . $link->hash);
+
+        $response->assertStatus(403);
     }
 }

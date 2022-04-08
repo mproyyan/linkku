@@ -22,7 +22,6 @@ return new class extends Migration
             $table->string('url');
             $table->text('description')->nullable();
             $table->text('excerpt')->nullable();
-            $table->unsignedBigInteger('clicks')->default(0);
             $table->unsignedBigInteger('views')->default(0);
             $table->unsignedBigInteger('visibility');
             $table->foreign('visibility')->references('id')->on('visibilities');

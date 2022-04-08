@@ -94,4 +94,10 @@ class LinkPolicy
     {
         //
     }
+
+    public function visit(?User $user, Link $link)
+    {
+        $user = auth('sanctum')->user();
+        return $link->visibility == Link::PUBLIC || optional($user)->id == $link->user_id;
+    }
 }

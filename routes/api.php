@@ -38,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::get('/user/{user:username}', [ProfileController::class, 'getUserProfile']);
 
+Route::get('/g/{link:hash}', [LinkController::class, 'visit']);
 Route::prefix('/links')->group(function () {
    Route::get('/', [LinkController::class, 'index']);
    Route::get('/{link:slug}', [LinkController::class, 'show']);

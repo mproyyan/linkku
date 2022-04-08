@@ -146,4 +146,14 @@ class LinkController extends Controller
             'message' => 'Link deleted successfully'
         ], 200);
     }
+
+    public function visit(Link $link)
+    {
+        $this->authorize('visit', $link);
+
+        $link->views = (int) $link->views + 1;
+        $link->save();
+
+        return response(['url' => $link->url], 200);
+    }
 }

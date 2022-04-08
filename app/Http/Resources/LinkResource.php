@@ -21,7 +21,6 @@ class LinkResource extends JsonResource
             'slug' => $this->slug,
             'description' => $this->description ?? null,
             'excerpt' => $this->excerpt ?? null,
-            'url' => $this->url,
             'views' => $this->views,
             'visibility' => $this->whenLoaded('type')->visibility,
             'tags' => TagResource::collection($this->whenLoaded('tags'))
