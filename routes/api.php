@@ -34,6 +34,10 @@ Route::middleware('auth:sanctum')->group(function () {
       ->except(['index', 'show'])
       ->scoped(['link' => 'slug']);
 
+   Route::resource('archives', ArchiveController::class)
+      ->except(['index', 'show'])
+      ->scoped(['archive' => 'slug']);
+
    Route::post('/logout', [AuthController::class, 'logout']);
 });
 

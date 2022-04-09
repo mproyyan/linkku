@@ -270,4 +270,86 @@ class ArchiveTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_save_archive_to_database()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $visibility = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/archives', [
+                'title' => 'test archive',
+                'tags' => $tags->pluck('id')->all(),
+                'visibility' => $visibility->id
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json->where('archive.author.username', $user->username)
+                    ->where('archive.title', 'test archive')
+                    ->where('archive.slug', 'test-archive')
+                    ->where('archive.visibility', 'Public')
+                    ->has('archive.tags', 3)
+                    ->etc()
+            );
+
+        $this->assertDatabaseHas('archives', [
+            'title' => 'test archive',
+            'slug' => 'test-archive'
+        ]);
+    }
+
+    public function test_create_archive_failed_when_given_tags_doesnt_exists()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $visibility = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/archives', [
+                'title' => 'test archive',
+                'tags' => [8, 9, 6],
+                'visibility' => $visibility->id
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_create_archive_failed_when_given_tags_more_than_five()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(6)->create();
+        $visibility = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/archives', [
+                'title' => 'test archive',
+                'tags' => $tags->pluck('id')->all(),
+                'visibility' => $visibility->id
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_create_archive_failed_when_given_visibility_doesnt_exist()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $visibility = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/archives', [
+                'title' => 'test archive',
+                'tags' => $tags->pluck('id')->all(),
+                'visibility' => 2
+            ]);
+
+        $response->assertStatus(422);
+    }
 }

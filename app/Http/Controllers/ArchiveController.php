@@ -6,6 +6,7 @@ use App\Http\Resources\ArchiveResource;
 use App\Http\Resources\LinkResource;
 use App\Models\Archive;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ArchiveController extends Controller
 {
@@ -32,7 +33,29 @@ class ArchiveController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $data = $request->validate([
+            'title' => 'required|max:60',
+            'tags' => 'required|array|max:5|min:1',
+            'tags.*' => 'numeric|exists:tags,id|distinct:ignore_case',
+            'visibility' => 'required|numeric|exists:visibilities,id'
+        ]);
+
+        if ($request->description) {
+            $request->validate(['description' => 'required']);
+            $data['description'] = $request->description;
+            $data['excerpt'] = Str::limit(strip_tags($request->description), 200);
+        }
+
+        $data['user_id'] = auth('sanctum')->id();
+
+        $archive = Archive::create($data);
+        foreach ($data['tags'] as $tag) {
+            $archive->tags()->attach($tag);
+        }
+
+        return response([
+            'archive' => new ArchiveResource($archive->load(['author', 'type', 'tags']))
+        ], 201);
     }
 
     /**
