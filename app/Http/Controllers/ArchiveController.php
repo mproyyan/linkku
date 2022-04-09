@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\ArchiveResource;
+use App\Http\Resources\LinkResource;
 use App\Models\Archive;
 use Illuminate\Http\Request;
 
@@ -50,6 +51,24 @@ class ArchiveController extends Controller
         return response([
             'archive' => new ArchiveResource($archive->load(['tags', 'author', 'type']))
         ], 200);
+    }
+
+    /**
+     * Get links from archive.
+     *
+     * @param  \App\Models\Archive  $archive
+     * @return \Illuminate\Http\Response
+     */
+    public function getLinks(Archive $archive)
+    {
+        $this->authorize('getLinks', $archive);
+
+        $links = $archive->links()
+            ->orderBy('archive_link.created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return LinkResource::collection($links->load(['tags', 'author', 'type']));
     }
 
     /**

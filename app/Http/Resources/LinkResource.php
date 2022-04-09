@@ -16,6 +16,7 @@ class LinkResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'hash' => $this->hash,
             'author' => new UserResource($this->whenLoaded('author')),
             'title' => $this->title,
             'slug' => $this->slug,

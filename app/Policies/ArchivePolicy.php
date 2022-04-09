@@ -34,6 +34,12 @@ class ArchivePolicy
         return $archive->visibility == Archive::PUBLIC || $archive->user_id == optional($user)->id;
     }
 
+    public function getLinks(?User $user, Archive $archive)
+    {
+        $user = auth('sanctum')->user();
+        return $archive->visibility == Archive::PUBLIC || $archive->user_id == optional($user)->id;
+    }
+
     /**
      * Determine whether the user can create models.
      *
