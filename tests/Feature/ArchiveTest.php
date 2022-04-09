@@ -352,4 +352,71 @@ class ArchiveTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    public function test_update_archive()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $deletedTags = Tag::factory(3)->create();
+        $newTags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($deletedTags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->putJson('/api/archives/' . $archive->slug, [
+                'title' => 'updated title',
+                'tags' => $newTags->pluck('id')->all(),
+                'visibility' => $private->id
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('archive.tags.0.id', fn ($id) => in_array($id, $newTags->pluck('id')->all()))
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json->where('archive.title', 'updated title')
+                    ->where('archive.slug', 'updated-title')
+                    ->where('archive.visibility', 'Private')
+                    ->etc()
+            );
+
+        foreach ($deletedTags->pluck('id')->all() as $id) {
+            $this->assertDatabaseMissing('taggables', [
+                'tag_id' => $id,
+                'taggable_id' => $archive->id,
+                'taggable_type' => 'App\Models\Archive'
+            ]);
+        }
+    }
+
+    public function test_user_cannot_update_archive_if_not_owner()
+    {
+        $owner = User::factory()->create();
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $deletedTags = Tag::factory(3)->create();
+        $newTags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $archive = Archive::factory()
+            ->for($owner, 'author')
+            ->for($public, 'type')
+            ->hasAttached($deletedTags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->putJson('/api/archives/' . $archive->slug, [
+                'title' => 'updated title',
+                'tags' => $newTags->pluck('id')->all(),
+                'visibility' => $private->id
+            ]);
+
+        $response->assertStatus(403);
+    }
 }
