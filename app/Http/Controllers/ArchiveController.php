@@ -145,6 +145,20 @@ class ArchiveController extends Controller
      */
     public function destroy(Archive $archive)
     {
-        //
+        $this->authorize('delete', $archive);
+
+        DB::transaction(function () use ($archive) {
+            DB::table('taggables')
+                ->where('taggable_id', $archive->id)
+                ->where('taggable_type', 'App\Models\Archive')
+                ->delete();
+
+            $archive->delete();
+        });
+
+        return response([
+            'status' => true,
+            'message' => 'Archive deleted successfully'
+        ], 200);
     }
 }

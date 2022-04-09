@@ -71,9 +71,10 @@ class ArchivePolicy
      * @param  \App\Models\Archive  $archive
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function delete(User $user, Archive $archive)
+    public function delete(?User $user, Archive $archive)
     {
-        //
+        $user = auth('sanctum')->user();
+        return $archive->user_id == optional($user)->id;
     }
 
     /**

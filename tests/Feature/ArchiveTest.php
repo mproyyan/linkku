@@ -419,4 +419,58 @@ class ArchiveTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_delete_archive()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->deleteJson('/api/archives/' . $archive->slug);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'status' => true,
+                'message' => 'Archive deleted successfully'
+            ]);
+
+        $this->assertDatabaseMissing('archives', [
+            'id' => $archive->id,
+            'slug' => $archive->slug,
+        ]);
+
+        foreach ($tags->pluck('id')->all() as $id) {
+            $this->assertDatabaseMissing('taggables', [
+                'tag_id' => $id,
+                'taggable_id' => $archive->id,
+                'taggable_type' => 'App\Models\Archive'
+            ]);
+        }
+    }
+
+    public function test_user_cannot_delete_archive_if_not_owner()
+    {
+        $owner = User::factory()->create();
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+
+        $archive = Archive::factory()
+            ->for($owner, 'author')
+            ->for(Visibility::create(['id' => 1, 'visibility' => 'Public']), 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->deleteJson('/api/archives/' . $archive->slug);
+
+        $response->assertStatus(403);
+    }
 }
