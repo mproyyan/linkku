@@ -16,13 +16,17 @@ class ArchiveTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_only_get_archives_that_has_link_and_visibility_is_public()
+    public function test_only_get_all_archives_that_has_link_and_visibility_is_public()
     {
         $user = User::factory()->create();
         $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
         $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
         $tags = Tag::factory(3)->create();
-        $links = Link::factory(5)->create();
+        $links = Link::factory(5)
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
 
         // private archive
         Archive::factory(3)
@@ -65,5 +69,102 @@ class ArchiveTest extends TestCase
                             ->etc()
                     )
             );
+    }
+
+    public function test_get_archive()
+    {
+        $user = User::factory()->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+        $tags = Tag::factory(3)->create();
+        $links = Link::factory(5)
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags, [], 'tags')
+            ->hasAttached($links, [], 'links')
+            ->create();
+
+        $response = $this->getJson('/api/archives/' . $archive->slug);
+
+        $response->assertStatus(200)
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json->where('archive.author.username', $user->username)
+                    ->where('archive.title', $archive->title)
+                    ->where('archive.slug', $archive->slug)
+                    ->where('archive.links_count', 5)
+                    ->where('archive.visibility', 'Public')
+                    ->has('archive.tags', 3)
+                    ->etc()
+            );
+    }
+
+    public function test_owner_can_access_private_archive()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+        $tags = Tag::factory(3)->create();
+        $links = Link::factory(5)
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($private, 'type')
+            ->hasAttached($tags, [], 'tags')
+            ->hasAttached($links, [], 'links')
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/archives/' . $archive->slug);
+
+        $response->assertStatus(200)
+            ->assertJson(
+                fn (AssertableJson $json) =>
+                $json->where('archive.author.username', $user->username)
+                    ->where('archive.title', $archive->title)
+                    ->where('archive.slug', $archive->slug)
+                    ->where('archive.links_count', 5)
+                    ->where('archive.visibility', 'Private')
+                    ->has('archive.tags', 3)
+                    ->etc()
+            );
+    }
+
+    public function test_abort_if_user_access_private_archive()
+    {
+        $owner = User::factory()->create();
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+        $tags = Tag::factory(3)->create();
+        $links = Link::factory(5)
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($owner, 'author')
+            ->for($private, 'type')
+            ->hasAttached($tags, [], 'tags')
+            ->hasAttached($links, [], 'links')
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/archives/' . $archive->slug);
+
+        $response->assertStatus(403);
     }
 }

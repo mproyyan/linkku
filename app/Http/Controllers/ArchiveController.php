@@ -42,7 +42,14 @@ class ArchiveController extends Controller
      */
     public function show(Archive $archive)
     {
-        //
+        $this->authorize('view', $archive);
+
+        $archive->views = (int) $archive->views + 1;
+        $archive->save();
+
+        return response([
+            'archive' => new ArchiveResource($archive->load(['tags', 'author', 'type']))
+        ], 200);
     }
 
     /**

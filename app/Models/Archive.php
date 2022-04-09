@@ -11,6 +11,11 @@ class Archive extends Model
 {
     use HasFactory, HasSlug;
 
+    const PUBLIC = 1;
+    const PRIVATE = 2;
+
+    protected $fillable = ['user_id', 'title', 'slug', 'description', 'excerpt', 'views', 'visibility'];
+
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()

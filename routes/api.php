@@ -47,6 +47,7 @@ Route::prefix('/links')->group(function () {
 
 Route::prefix('/archives')->group(function () {
    Route::get('/', [ArchiveController::class, 'index']);
+   Route::get('/{archive:slug}', [ArchiveController::class, 'show']);
 });
 
 Route::post('/register', [AuthController::class, 'register']);
