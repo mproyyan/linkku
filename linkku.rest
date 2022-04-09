@@ -15,3 +15,9 @@ Accept: application/json
 GET http://linkku.test/api/links
 Content-Type: application/json
 Accept: application/json
+
+###
+
+GET http://linkku.test/api/archives
+Accept: application/json
+Content-Type: application/json

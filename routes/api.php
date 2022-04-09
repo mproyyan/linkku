@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ArchiveController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\ProfileController;
@@ -42,6 +43,10 @@ Route::get('/g/{link:hash}', [LinkController::class, 'visit']);
 Route::prefix('/links')->group(function () {
    Route::get('/', [LinkController::class, 'index']);
    Route::get('/{link:slug}', [LinkController::class, 'show']);
+});
+
+Route::prefix('/archives')->group(function () {
+   Route::get('/', [ArchiveController::class, 'index']);
 });
 
 Route::post('/register', [AuthController::class, 'register']);
