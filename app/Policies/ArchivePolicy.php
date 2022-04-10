@@ -106,4 +106,10 @@ class ArchivePolicy
         $user = auth('sanctum')->user();
         return optional($user)->id == $archive->user_id;
     }
+
+    public function deleteLink(?User $user, Archive $archive)
+    {
+        $user = auth('sanctum')->user();
+        return optional($user)->id == $archive->user_id;
+    }
 }

@@ -199,4 +199,30 @@ class ArchiveController extends Controller
             'message' => 'Added new link to archive successfully.'
         ], 201);
     }
+
+    public function deleteLinkFromArchive(Archive $archive, $hash)
+    {
+        $this->authorize('deleteLink', $archive);
+
+        $link = $archive->links()
+            ->where('hash', '=', $hash)
+            ->first();
+
+        if (!$link) {
+            return response([
+                'error' => true,
+                'message' => 'Link not found.'
+            ], 404);
+        }
+
+        DB::table('archive_link')
+            ->where('archive_id', $archive->id)
+            ->where('link_id', $link->id)
+            ->delete();
+
+        return response([
+            'success' => true,
+            'message' => 'Link deleted from archive successfully.'
+        ]);
+    }
 }

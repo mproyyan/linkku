@@ -643,4 +643,86 @@ class ArchiveTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_link_deleted_from_archive()
+    {
+        $owner = User::factory()->create();
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->hasAttached($link)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->deleteJson("/api/archives/$archive->slug/del/$link->hash");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Link deleted from archive successfully.'
+            ]);
+
+        $this->assertDatabaseMissing('archive_link', [
+            'archive_id' => $archive->id,
+            'link_id' => $link->id
+        ]);
+    }
+
+    public function test_failed_deleted_link_when_user_delete_link_from_archive_that_doesnt_belong_to_him()
+    {
+        $owner = User::factory()->create();
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($owner, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->hasAttached($link)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->deleteJson("/api/archives/$archive->slug/del/$link->hash");
+
+        $response->assertStatus(403);
+    }
+
+    public function test_failed_deleted_link_when_link_not_found_in_the_archive()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->deleteJson("/api/archives/$archive->slug/del/sssss");
+
+        $response->assertStatus(404);
+    }
 }
