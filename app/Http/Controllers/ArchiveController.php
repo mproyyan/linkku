@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ArchiveResource;
 use App\Http\Resources\LinkResource;
 use App\Models\Archive;
+use App\Models\Link;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -160,5 +161,42 @@ class ArchiveController extends Controller
             'status' => true,
             'message' => 'Archive deleted successfully'
         ], 200);
+    }
+
+    public function addLinkToArchive(Archive $archive, $hash)
+    {
+        $this->authorize('addLink', $archive);
+
+        $user = auth('sanctum')->user();
+        $link = Link::where('hash', '=', $hash)->first();
+        $existsLink = $archive->links->pluck('id')->all();
+
+        if (!$link) {
+            return response([
+                'error' => true,
+                'message' => 'Link not found.'
+            ], 404);
+        }
+
+        if (in_array($link->id, $existsLink)) {
+            return response([
+                'error' => true,
+                'message' => 'Cannot add link because already exist.'
+            ], 400);
+        }
+
+        if ($link->visibility != Link::PUBLIC && $link->user_id != $user->id) {
+            return response([
+                'error' => true,
+                'message' => 'Cannot add link because link is private'
+            ], 400);
+        }
+
+        $archive->links()->attach($link->id);
+
+        return response([
+            'success' => true,
+            'message' => 'Added new link to archive successfully.'
+        ], 201);
     }
 }

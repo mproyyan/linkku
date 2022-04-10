@@ -473,4 +473,174 @@ class ArchiveTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_add_new_link_to_archive()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson("/api/archives/$archive->slug/add/$link->hash");
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('archive_link', [
+            'archive_id' => $archive->id,
+            'link_id' => $link->id
+        ]);
+    }
+
+    public function test_the_owner_can_add_a_private_link_to_the_archive_as_long_as_the_link_belongs_to_him()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for($private, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson("/api/archives/$archive->slug/add/$link->hash");
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('archive_link', [
+            'archive_id' => $archive->id,
+            'link_id' => $link->id
+        ]);
+    }
+
+    public function test_add_link_failed_when_link_not_found()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson("/api/archives/$archive->slug/add/hsgf733cxcbg");
+
+        $response->assertStatus(404);
+    }
+
+    public function test_add_link_failed_when_link_already_exists_in_archive()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->hasAttached($link)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson("/api/archives/$archive->slug/add/$link->hash");
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'error' => true,
+                'message' => 'Cannot add link because already exist.'
+            ]);
+    }
+
+    public function test_add_link_failed_when_link_is_private()
+    {
+        $owner = User::factory()->create();
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $link = Link::factory()
+            ->for($owner, 'author')
+            ->for($private, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson("/api/archives/$archive->slug/add/$link->hash");
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'error' => true,
+                'message' => 'Cannot add link because link is private'
+            ]);
+    }
+
+    public function test_add_link_failed_if_user_add_link_to_archive_but_that_archive_is_not_belong_to_him()
+    {
+        $owner = User::factory()->create();
+        $user = User::factory()->create();
+        $token = $user->createToken('main')->plainTextToken;
+        $tags = Tag::factory(3)->create();
+        $public = Visibility::create(['id' => 1, 'visibility' => 'Public']);
+        $private = Visibility::create(['id' => 2, 'visibility' => 'Private']);
+
+        $link = Link::factory()
+            ->for($user, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $archive = Archive::factory()
+            ->for($owner, 'author')
+            ->for($public, 'type')
+            ->hasAttached($tags)
+            ->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson("/api/archives/$archive->slug/add/$link->hash");
+
+        $response->assertStatus(403);
+    }
 }

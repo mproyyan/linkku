@@ -100,4 +100,10 @@ class ArchivePolicy
     {
         //
     }
+
+    public function addLink(?User $user, Archive $archive)
+    {
+        $user = auth('sanctum')->user();
+        return optional($user)->id == $archive->user_id;
+    }
 }

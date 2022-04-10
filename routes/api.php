@@ -34,7 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
       ->except(['index', 'show'])
       ->scoped(['link' => 'slug']);
 
-   Route::resource('archives', ArchiveController::class)
+   Route::post('/archives/{archive:slug}/add/{hash}', [ArchiveController::class, 'addLinkToArchive']);
+   Route::apiResource('archives', ArchiveController::class)
       ->except(['index', 'show'])
       ->scoped(['archive' => 'slug']);
 
