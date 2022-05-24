@@ -74,6 +74,8 @@ class AuthTest extends TestCase
     public function test_user_logout()
     {
         $user = User::factory()->create();
+        $user->createToken('main')->plainTextToken;
+        $user->createToken('main')->plainTextToken;
         $token = $user->createToken('main')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)

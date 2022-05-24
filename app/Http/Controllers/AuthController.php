@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\RegisterRequest;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +24,7 @@ class AuthController extends Controller
         $token = $user->createToken('main')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => new UserResource($user),
             'token' => $token
         ], 201);
     }
@@ -45,7 +46,7 @@ class AuthController extends Controller
         $token = $user->createToken('main')->plainTextToken;
 
         return response([
-            'user' => $user,
+            'user' => new UserResource($user),
             'token' => $token
         ], 200);
     }
@@ -54,7 +55,7 @@ class AuthController extends Controller
     {
         $user = Auth::user();
         // Revoke the token that was used to authenticate the current request...
-        $user->currentAccessToken()->delete();
+        $user->tokens()->delete();
 
         return response([
             'success' => true

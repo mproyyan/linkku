@@ -21,3 +21,14 @@ Accept: application/json
 GET http://linkku.test/api/archives
 Accept: application/json
 Content-Type: application/json
+
+### 
+
+PUT http://linkku.test/api/user/gordon01/update-banner
+Content-Type: multipart/form-data
+Accept: application/json
+Authorization: Bearer 1|1SqXaAYneQpBnYt9dMKqO1B1z47Q2KR4qxPbM2xM
+
+{
+   "banner": "ssssss"
+}
