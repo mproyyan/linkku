@@ -5,21 +5,17 @@ Linkku is RESTful Application created using laravel framework that can be used f
 - Save and manage your link
 - Shorten your url
 - Create **Archive** for manage and collect links
-  
-<br>
 
 ## Instalation
 ----------
 
-```console
-   git clone https://github.com/mproyyan/linkku.git
 ```
-```console
-   composer install
+git clone https://github.com/mproyyan/linkku.git
 ```
-
-<br>
+```
+composer install
+```
 
 ## Documentation
 ----------
-You can read full documentation [here]([https://](https://mproyyan.github.io/linkku/))
+You can read full documentation **[here](https://mproyyan.github.io/linkku/)**
