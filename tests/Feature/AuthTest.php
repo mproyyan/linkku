@@ -53,6 +53,12 @@ class AuthTest extends TestCase
         ]);
     }
 
+    public function test_user_register_failed()
+    {
+        $response = $this->postJson('/api/register');
+        $response->assertUnprocessable();
+    }
+
     public function test_user_login_success()
     {
         $response = $this->postJson('/api/login', [
