@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Requests\LoginRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Testing\Assert;
@@ -9,6 +10,8 @@ use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\TestCase;
 use App\Models\User;
 use Database\Factories\UserFactory;
+use Illuminate\Cache\RateLimiter;
+use Illuminate\Support\Str;
 
 class AuthTest extends TestCase
 {
@@ -86,9 +89,28 @@ class AuthTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertExactJson([
-                'error' => 'The Provided credentials are not correct'
+            ->assertJsonStructure([
+                'message',
+                'errors'
             ]);
+    }
+
+    public function test_login_too_many_request()
+    {
+        /** @var \Illuminate\Cache\RateLimiter $rateLimiter */
+        $rateLimiter = $this->app->make(RateLimiter::class);
+        $throttleKey = Str::lower("{$this->user->email}|") . request()->ip();
+
+        collect(range(1, LoginRequest::MAX_ATTEMPTS))->each(function () use ($rateLimiter, $throttleKey) {
+            $this->app->call([$rateLimiter, 'hit'], ['key' => $throttleKey]);
+        });
+
+        $response = $this->postJson('/api/login', [
+            'email' => $this->user->email,
+            'password' => UserFactory::DEFAULT_PLAIN_TEXT_PASSWORD
+        ]);
+
+        $response->assertStatus(429);
     }
 
     public function test_user_logout()
