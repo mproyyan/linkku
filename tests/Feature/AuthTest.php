@@ -46,6 +46,11 @@ class AuthTest extends TestCase
                     ->whereType('token', 'string')
                     ->etc()
             );
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'Muhammad Pandu Royyan',
+            'username' => 'siroyan'
+        ]);
     }
 
     public function test_user_login_success()
