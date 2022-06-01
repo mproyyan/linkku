@@ -8,10 +8,23 @@ use Illuminate\Testing\Assert;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\TestCase;
 use App\Models\User;
+use Database\Factories\UserFactory;
 
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * @var \App\Models\User
+     */
+    private $user;
+
+    public function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+    }
 
     public function test_register_new_user()
     {
@@ -37,19 +50,17 @@ class AuthTest extends TestCase
 
     public function test_user_login_success()
     {
-        $user = User::factory()->create();
-
         $response = $this->postJson('/api/login', [
-            'email' => $user->email,
-            'password' => 'password'
+            'email' => $this->user->email,
+            'password' => UserFactory::DEFAULT_PLAIN_TEXT_PASSWORD
         ]);
 
         $response->assertStatus(200)
             ->assertJsonPath('token', fn ($token) => strlen($token) > 1)
             ->assertJson(
                 fn (AssertableJson $json) =>
-                $json->where('user.name', $user->name)
-                    ->where('user.email', $user->email)
+                $json->where('user.name', $this->user->name)
+                    ->where('user.email', $this->user->email)
                     ->missing('user.password')
                     ->whereType('token', 'string')
                     ->etc()
@@ -58,10 +69,8 @@ class AuthTest extends TestCase
 
     public function test_user_login_failed()
     {
-        $user = User::factory()->create();
-
         $response = $this->postJson('/api/login', [
-            'email' => $user->email,
+            'email' => $this->user->email,
             'password' => 'passwordssss'
         ]);
 
@@ -73,17 +82,13 @@ class AuthTest extends TestCase
 
     public function test_user_logout()
     {
-        $user = User::factory()->create();
-        $user->createToken('main')->plainTextToken;
-        $user->createToken('main')->plainTextToken;
-        $token = $user->createToken('main')->plainTextToken;
-
+        $token = $this->user->createToken('main')->plainTextToken;
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/logout');
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('personal_access_tokens', [
-            'tokenable_id' => $user->id
+            'tokenable_id' => $this->user->id
         ]);
     }
 }
