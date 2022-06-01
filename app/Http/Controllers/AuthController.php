@@ -37,6 +37,11 @@ class AuthController extends Controller
         ], 201);
     }
 
+    /**
+     * @param \Illuminate\Http\Request $request
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function login(Request $request)
     {
         $credential = $request->validate([
@@ -50,6 +55,9 @@ class AuthController extends Controller
             ], 422);
         }
 
+        /**
+         * @var \App\Models\User $user
+         */
         $user = Auth::user();
         $token = $user->createToken('main')->plainTextToken;
 
