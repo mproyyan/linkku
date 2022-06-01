@@ -67,9 +67,16 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function logout(Request $request)
+    /**
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function logout()
     {
+        /**
+         * @var \App\Models\User $user
+         */
         $user = Auth::user();
+
         // Revoke the token that was used to authenticate the current request...
         $user->tokens()->delete();
 
