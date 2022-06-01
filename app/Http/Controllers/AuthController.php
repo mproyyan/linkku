@@ -10,10 +10,18 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
+    /**
+     * @param \App\Http\Requests\RegisterRequest $request
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function register(RegisterRequest $request)
     {
         $validated = $request->validated();
 
+        /**
+         * @var \App\Models\User $user
+         */
         $user = User::create([
             'name' => $validated['name'],
             'username' => $validated['username'],
