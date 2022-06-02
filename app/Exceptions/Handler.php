@@ -2,7 +2,11 @@
 
 namespace App\Exceptions;
 
+use App\Support\HttpApiErrorFormat;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -34,8 +38,21 @@ class Handler extends ExceptionHandler
      */
     public function register()
     {
-        $this->reportable(function (Throwable $e) {
-            //
-        });
+        $this->renderable($this->handleTooManyHttpRequestException(...));
+    }
+
+    /**
+     * @return \Illuminate\Http\Response|\Illuminate\Contracts\Routing\ResponseFactory|null
+     */
+    protected function handleTooManyHttpRequestException(TooManyRequestsHttpException $e, Request $request)
+    {
+        if ($request->is('api/*')) {
+            $retryAfter = $e->getHeaders()['Retry-After'];
+            $tooManyRequestProblem = new HttpApiErrorFormat($e->getStatusCode(), [
+                'detail' => "You have exceeded the rate limit. Please try again in {$retryAfter} seconds."
+            ]);
+
+            return response($tooManyRequestProblem->toArray(), Response::HTTP_TOO_MANY_REQUESTS);
+        }
     }
 }
