@@ -6,6 +6,7 @@ use App\Support\HttpApiErrorFormat;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Throwable;
 
@@ -39,6 +40,7 @@ class Handler extends ExceptionHandler
     public function register()
     {
         $this->renderable($this->handleTooManyHttpRequestException(...));
+        $this->renderable($this->handleValidationException(...));
     }
 
     /**
@@ -54,5 +56,29 @@ class Handler extends ExceptionHandler
 
             return response($tooManyRequestProblem->toArray(), Response::HTTP_TOO_MANY_REQUESTS);
         }
+    }
+
+    /**
+     * @return \Illuminate\Http\Response|\Illuminate\Contracts\Routing\ResponseFactory|null
+     */
+    protected function handleValidationException(ValidationException $e, Request $request)
+    {
+        $errors = $e->errors();
+        $error = $errors[array_key_first($errors)];
+
+        if (count($errors) > 1 || count($error) > 1) {
+            $validationProblem = new HttpApiErrorFormat(Response::HTTP_UNPROCESSABLE_ENTITY, [
+                'detail' => "There were multiple problems on field that have occurred.",
+                'problems' => $errors
+            ]);
+
+            return response($validationProblem->toArray(), Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $validationProblem = new HttpApiErrorFormat(Response::HTTP_UNPROCESSABLE_ENTITY, [
+            'detail' => $e->getMessage(),
+        ]);
+
+        return response($validationProblem->toArray(), Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }
