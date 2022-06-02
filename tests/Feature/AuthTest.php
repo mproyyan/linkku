@@ -5,28 +5,22 @@ namespace Tests\Feature;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Testing\Assert;
 use Illuminate\Testing\Fluent\AssertableJson;
 use Tests\TestCase;
-use App\Models\User;
 use Database\Factories\UserFactory;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Str;
+use Tests\Trait\WithUser;
 
 class AuthTest extends TestCase
 {
-    use RefreshDatabase;
-
-    /**
-     * @var \App\Models\User
-     */
-    private $user;
+    use RefreshDatabase, WithUser;
 
     public function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $this->setupUser();
     }
 
     public function test_register_new_user()
