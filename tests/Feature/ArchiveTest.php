@@ -405,7 +405,9 @@ class ArchiveTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->ownerToken)
             ->postJson("/api/archives/{$this->publicArchive->slug}/add/hsgf733cxcbg");
 
-        $response->assertStatus(404);
+        $response->assertStatus(404)
+            ->assertJsonStructure($this->standardApiProblemStructure)
+            ->assertJsonPath('detail', 'Link not found');
     }
 
     public function test_add_link_failed_when_link_already_exists_in_archive()
@@ -415,11 +417,9 @@ class ArchiveTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->ownerToken)
             ->postJson("/api/archives/{$this->publicArchive->slug}/add/$link->hash");
 
-        $response->assertStatus(400)
-            ->assertJson([
-                'error' => true,
-                'message' => 'Cannot add link because already exist.'
-            ]);
+        $response->assertStatus(409)
+            ->assertJsonStructure($this->standardApiProblemStructure)
+            ->assertJsonPath('detail', 'The link is already in the archive');
     }
 
     public function test_add_link_failed_when_link_is_private_and_link_doesnt_belongs_to_him()
@@ -436,11 +436,9 @@ class ArchiveTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->ownerToken)
             ->postJson("/api/archives/{$this->publicArchive->slug}/add/$link->hash");
 
-        $response->assertStatus(400)
-            ->assertJson([
-                'error' => true,
-                'message' => 'Cannot add link because link is private'
-            ]);
+        $response->assertStatus(403)
+            ->assertJsonStructure($this->standardApiProblemStructure)
+            ->assertJsonPath('detail', 'Cannot add private link');
     }
 
     public function test_add_link_failed_if_user_add_link_to_archive_but_that_archive_is_not_belong_to_him()
@@ -502,6 +500,8 @@ class ArchiveTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->ownerToken)
             ->deleteJson("/api/archives/{$this->publicArchive->slug}/del/sssss");
 
-        $response->assertStatus(404);
+        $response->assertStatus(404)
+            ->assertJsonStructure($this->standardApiProblemStructure)
+            ->assertJsonPath('detail', 'Link not found');
     }
 }
