@@ -9,8 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 use Phpro\ApiProblem\Http\ForbiddenProblem;
+use Phpro\ApiProblem\Http\NotFoundProblem;
 use Phpro\ApiProblem\Http\UnauthorizedProblem;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Throwable;
 
@@ -46,6 +48,8 @@ class Handler extends ExceptionHandler
         $this->renderable($this->handleTooManyHttpRequestException(...));
         $this->renderable($this->handleValidationException(...));
         $this->renderable($this->handleAuthorizationException(...));
+        $this->renderable($this->handleAuthenticationException(...));
+        $this->renderable($this->handleNotFoundHttpException(...));
     }
 
     /**
@@ -110,6 +114,15 @@ class Handler extends ExceptionHandler
             $unauthorizedProblem = new UnauthorizedProblem($e->getMessage());
 
             return response($unauthorizedProblem->toArray(), Response::HTTP_UNAUTHORIZED);
+        }
+    }
+
+    protected function handleNotFoundHttpException(NotFoundHttpException $e, Request $request)
+    {
+        if ($request->is('api/*')) {
+            $notFoundProblem = new NotFoundProblem($e->getMessage());
+
+            return response($notFoundProblem->toArray(), Response::HTTP_NOT_FOUND);
         }
     }
 }
