@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ConflictException;
+use App\Exceptions\ForbiddenException;
 use App\Http\Resources\ArchiveResource;
 use App\Http\Resources\LinkResource;
 use App\Models\Archive;
 use App\Models\Link;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -172,24 +175,15 @@ class ArchiveController extends Controller
         $existsLink = $archive->links->pluck('id')->all();
 
         if (!$link) {
-            return response([
-                'error' => true,
-                'message' => 'Link not found.'
-            ], 404);
+            throw new ModelNotFoundException('Link not found');
         }
 
         if (in_array($link->id, $existsLink)) {
-            return response([
-                'error' => true,
-                'message' => 'Cannot add link because already exist.'
-            ], 400);
+            throw new ConflictException('The link is already in the archive');
         }
 
         if ($link->visibility != Link::PUBLIC && $link->user_id != $user->id) {
-            return response([
-                'error' => true,
-                'message' => 'Cannot add link because link is private'
-            ], 400);
+            throw new ForbiddenException('Cannot add private link');
         }
 
         $archive->links()->attach($link->id);
@@ -209,10 +203,7 @@ class ArchiveController extends Controller
             ->first();
 
         if (!$link) {
-            return response([
-                'error' => true,
-                'message' => 'Link not found.'
-            ], 404);
+            throw new ModelNotFoundException('Link not found');
         }
 
         DB::table('archive_link')
