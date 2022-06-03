@@ -3,11 +3,13 @@
 namespace App\Exceptions;
 
 use App\Support\HttpApiErrorFormat;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 use Phpro\ApiProblem\Http\ForbiddenProblem;
+use Phpro\ApiProblem\Http\UnauthorizedProblem;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Throwable;
@@ -66,31 +68,48 @@ class Handler extends ExceptionHandler
      */
     protected function handleValidationException(ValidationException $e, Request $request)
     {
-        $errors = $e->errors();
-        $error = $errors[array_key_first($errors)];
+        if ($request->is('api/*')) {
+            $errors = $e->errors();
+            $error = $errors[array_key_first($errors)];
 
-        if (count($errors) > 1 || count($error) > 1) {
+            if (count($errors) > 1 || count($error) > 1) {
+                $validationProblem = new HttpApiErrorFormat(Response::HTTP_UNPROCESSABLE_ENTITY, [
+                    'detail' => "There were multiple problems on field that have occurred.",
+                    'problems' => $errors
+                ]);
+
+                return response($validationProblem->toArray(), Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
             $validationProblem = new HttpApiErrorFormat(Response::HTTP_UNPROCESSABLE_ENTITY, [
-                'detail' => "There were multiple problems on field that have occurred.",
-                'problems' => $errors
+                'detail' => $e->getMessage(),
             ]);
 
             return response($validationProblem->toArray(), Response::HTTP_UNPROCESSABLE_ENTITY);
         }
-
-        $validationProblem = new HttpApiErrorFormat(Response::HTTP_UNPROCESSABLE_ENTITY, [
-            'detail' => $e->getMessage(),
-        ]);
-
-        return response($validationProblem->toArray(), Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
+    /**
+     * @return \Illuminate\Http\Response|\Illuminate\Contracts\Routing\ResponseFactory|null
+     */
     protected function handleAuthorizationException(AccessDeniedHttpException $e, Request $request)
     {
         if ($request->is('api/*')) {
-            $unauthorizeProblem = new ForbiddenProblem($e->getMessage());
+            $forbiddenProblem = new ForbiddenProblem($e->getMessage());
 
-            return response($unauthorizeProblem->toArray(), $e->getStatusCode());
+            return response($forbiddenProblem->toArray(), $e->getStatusCode());
+        }
+    }
+
+    /**
+     * @return \Illuminate\Http\Response|\Illuminate\Contracts\Routing\ResponseFactory|null
+     */
+    protected function handleAuthenticationException(AuthenticationException $e, Request $request)
+    {
+        if ($request->is('api/*')) {
+            $unauthorizedProblem = new UnauthorizedProblem($e->getMessage());
+
+            return response($unauthorizedProblem->toArray(), Response::HTTP_UNAUTHORIZED);
         }
     }
 }
