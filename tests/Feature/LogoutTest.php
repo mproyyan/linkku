@@ -30,4 +30,12 @@ class LogoutTest extends TestCase
             'tokenable_id' => $this->user->id
         ]);
     }
+
+    public function test_unauthorized_user_cannot_logout()
+    {
+        $response = $this->postJson('/api/logout');
+
+        $response->assertUnauthorized()
+            ->assertJsonStructure($this->standardApiProblemStructure);
+    }
 }
