@@ -7,6 +7,8 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
+use Phpro\ApiProblem\Http\ForbiddenProblem;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Throwable;
 
@@ -41,6 +43,7 @@ class Handler extends ExceptionHandler
     {
         $this->renderable($this->handleTooManyHttpRequestException(...));
         $this->renderable($this->handleValidationException(...));
+        $this->renderable($this->handleAuthorizationException(...));
     }
 
     /**
@@ -80,5 +83,14 @@ class Handler extends ExceptionHandler
         ]);
 
         return response($validationProblem->toArray(), Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    protected function handleAuthorizationException(AccessDeniedHttpException $e, Request $request)
+    {
+        if ($request->is('api/*')) {
+            $unauthorizeProblem = new ForbiddenProblem($e->getMessage());
+
+            return response($unauthorizeProblem->toArray(), $e->getStatusCode());
+        }
     }
 }

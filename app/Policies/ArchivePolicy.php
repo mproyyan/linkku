@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Archive;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Auth\Access\Response;
 
 class ArchivePolicy
 {
@@ -31,13 +32,17 @@ class ArchivePolicy
     public function view(?User $user, Archive $archive)
     {
         $user = auth('sanctum')->user();
-        return $archive->visibility == Archive::PUBLIC || $archive->user_id == optional($user)->id;
+        return $archive->visibility == Archive::PUBLIC || $archive->user_id == optional($user)->id
+            ? Response::allow()
+            : Response::deny('You cannot access private archive that are not yours');
     }
 
     public function getLinks(?User $user, Archive $archive)
     {
         $user = auth('sanctum')->user();
-        return $archive->visibility == Archive::PUBLIC || $archive->user_id == optional($user)->id;
+        return $archive->visibility == Archive::PUBLIC || $archive->user_id == optional($user)->id
+            ? Response::allow()
+            : Response::deny('You cannot get links from private archives that are not yours');
     }
 
     /**
@@ -61,7 +66,9 @@ class ArchivePolicy
     public function update(?User $user, Archive $archive)
     {
         $user = auth('sanctum')->user();
-        return $archive->user_id == optional($user)->id;
+        return $archive->user_id == optional($user)->id
+            ? Response::allow()
+            : Response::deny('You cannot update archive that are not yours');
     }
 
     /**
@@ -74,7 +81,9 @@ class ArchivePolicy
     public function delete(?User $user, Archive $archive)
     {
         $user = auth('sanctum')->user();
-        return $archive->user_id == optional($user)->id;
+        return $archive->user_id == optional($user)->id
+            ? Response::allow()
+            : Response::deny('You cannot delete archive that are not yours');
     }
 
     /**
@@ -104,12 +113,16 @@ class ArchivePolicy
     public function addLink(?User $user, Archive $archive)
     {
         $user = auth('sanctum')->user();
-        return optional($user)->id == $archive->user_id;
+        return optional($user)->id == $archive->user_id
+            ? Response::allow()
+            : Response::deny('You cannot add links to archives that are not yours');
     }
 
     public function deleteLink(?User $user, Archive $archive)
     {
         $user = auth('sanctum')->user();
-        return optional($user)->id == $archive->user_id;
+        return optional($user)->id == $archive->user_id
+            ? Response::allow()
+            : Response::deny('You cannot delete links from archives that are not yours');
     }
 }
