@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Link;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Auth\Access\Response;
 
 class LinkPolicy
 {
@@ -31,7 +32,9 @@ class LinkPolicy
     public function view(?User $user, Link $link)
     {
         $user = auth('sanctum')->user();
-        return $link->visibility == Link::PUBLIC || $link->user_id == optional($user)->id;
+        return $link->visibility == Link::PUBLIC || $link->user_id == optional($user)->id
+            ? Response::allow()
+            : Response::deny('You cannot access private link that are not yours');
     }
 
     /**
@@ -55,7 +58,9 @@ class LinkPolicy
     public function update(?User $user, Link $link)
     {
         $user = auth('sanctum')->user();
-        return $link->user_id == optional($user)->id;
+        return $link->user_id == optional($user)->id
+            ? Response::allow()
+            : Response::deny('You cannot update link that are not yours');
     }
 
     /**
@@ -68,7 +73,9 @@ class LinkPolicy
     public function delete(?User $user, Link $link)
     {
         $user = auth('sanctum')->user();
-        return $link->user_id == optional($user)->id;
+        return $link->user_id == optional($user)->id
+            ? Response::allow()
+            : Response::deny('You cannot delete link that are not yours');
     }
 
     /**
@@ -98,6 +105,8 @@ class LinkPolicy
     public function visit(?User $user, Link $link)
     {
         $user = auth('sanctum')->user();
-        return $link->visibility == Link::PUBLIC || optional($user)->id == $link->user_id;
+        return $link->visibility == Link::PUBLIC || optional($user)->id == $link->user_id
+            ? Response::allow()
+            : Response::deny('You cannot access private link that are not yours');;
     }
 }
