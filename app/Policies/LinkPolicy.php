@@ -107,6 +107,6 @@ class LinkPolicy
         $user = auth('sanctum')->user();
         return $link->visibility == Link::PUBLIC || optional($user)->id == $link->user_id
             ? Response::allow()
-            : Response::deny('You cannot access private link that are not yours');;
+            : Response::deny('You cannot access private link that are not yours');
     }
 }
